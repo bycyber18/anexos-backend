@@ -19,5 +19,11 @@ router.post(
   anexoController.uploadTecnico, 
   anexoController.generarAnexoInteligente, 
 );
+// CRUD Básico de Anexos
+router.get("/", anexoController.obtenerAnexos);
+router.get("/:id", anexoController.obtenerAnexoPorId);
+router.patch("/:id", anexoController.actualizarAnexo);
+router.delete("/:id", anexoController.eliminarAnexo);
+
 
 module.exports = router;

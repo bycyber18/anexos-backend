@@ -196,3 +196,79 @@ exports.generarAnexoInteligente = async (req, res) => {
     res.status(500).json({ error: "Error: " + error.message });
   }
 };
+
+// 4. Get a todos los anexos
+exports.obtenerAnexos = async (req, res) => {
+  try {
+    const anexos = await Anexo.find().sort({ createdAt: -1 });
+    res.status(200).json(anexos);
+  } catch (error) {
+    console.error("❌ Error obteniendo anexos:", error);
+    res.status(500).json({ error: "Error al obtener anexos" });
+  }
+};
+
+// 5. Get anexo por ID
+exports.obtenerAnexoPorId = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const anexo = await Anexo.findById(id);
+
+    if (!anexo) {
+      return res.status(404).json({ error: "Anexo no encontrado" });
+    }
+
+    res.status(200).json(anexo);
+  } catch (error) {
+    console.error("❌ Error obteniendo anexo:", error);
+    res.status(500).json({ error: "Error al obtener el anexo" });
+  }
+};
+
+// 6. Actualizar Anexo por ID
+exports.actualizarAnexo = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const anexoActualizado = await Anexo.findByIdAndUpdate(
+      id,
+      req.body,
+      { new: true }
+    );
+
+    if (!anexoActualizado) {
+      return res.status(404).json({ error: "Anexo no encontrado" });
+    }
+
+    res.status(200).json({
+      message: "Anexo actualizado correctamente",
+      data: anexoActualizado,
+    });
+  } catch (error) {
+    console.error("❌ Error actualizando anexo:", error);
+    res.status(500).json({ error: "Error al actualizar el anexo" });
+  }
+};
+
+// 7. ELIMINAR ANEXO
+exports.eliminarAnexo = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const anexoEliminado = await Anexo.findByIdAndDelete(id);
+
+    if (!anexoEliminado) {
+      return res.status(404).json({ error: "Anexo no encontrado" });
+    }
+
+    res.status(200).json({
+      message: "Anexo eliminado correctamente",
+    });
+  } catch (error) {
+    console.error("❌ Error eliminando anexo:", error);
+    res.status(500).json({ error: "Error al eliminar el anexo" });
+  }
+};
+
+
