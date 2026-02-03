@@ -1,12 +1,10 @@
-// backend/controllers/anexo.controller.js
-
 const PizZip = require("pizzip");
 const Docxtemplater = require("docxtemplater");
 const fs = require("fs");
 const path = require("path");
 const Anexo = require("../models/Anexo");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const PDFParser = require("pdf2json"); // Esta es la librería ganadora 🏆
+const PDFParser = require("pdf2json");
 
 // Configuración de Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -98,7 +96,7 @@ exports.generarAnexo = async (req, res) => {
   }
 };
 
-// 3. GENERACIÓN INTELIGENTE (VERSIÓN CORREGIDA)
+// 3. GENERACIÓN INTELIGENTE 
 exports.generarAnexoInteligente = async (req, res) => {
   try {
     if (!req.file)
@@ -123,13 +121,9 @@ exports.generarAnexoInteligente = async (req, res) => {
 
     console.log("🤖 Enviando TEXTO a Google Gemini...");
 
-    // B. IA GEMINI (CORRECCIÓN DE NOMBRE DEL MODELO AQUÍ)
-    // Intentamos con la versión específica "001" que suele ser más estable en la API
+    // B. IA GEMINI 
+    // Aca se usa la version más estable en la API
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    // NOTA: Si este también falla, cambia la línea de arriba por:
-    // const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
     const prompt = `
       Actúa como un experto en licitaciones SENCE. Analiza el siguiente texto extraído de un PDF:
       

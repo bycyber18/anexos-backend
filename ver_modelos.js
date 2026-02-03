@@ -1,4 +1,3 @@
-// backend/ver_modelos.js
 require("dotenv").config();
 
 const apiKey = process.env.GEMINI_API_KEY;
