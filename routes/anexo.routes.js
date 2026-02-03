@@ -16,8 +16,8 @@ router.post("/generar", anexoController.generarAnexo);
 // Subir PDF técnico y que la IA lo procese inteligentemente
 router.post(
   "/inteligente",
-  anexoController.uploadTecnico, // Middleware que permite subir el PDF
-  anexoController.generarAnexoInteligente, // Controlador que llama a Gemini
+  anexoController.uploadTecnico, 
+  anexoController.generarAnexoInteligente, 
 );
 
 module.exports = router;
