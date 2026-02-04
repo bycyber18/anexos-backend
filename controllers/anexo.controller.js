@@ -54,7 +54,6 @@ exports.subirPlantilla = (req, res) => {
 };
 
 // 2. Generar Manual
-// 2. Generar Manual
 exports.generarAnexo = async (req, res) => {
   try {
     const templateName = req.body.nombrePlantilla || "plantilla_prueba.docx";
@@ -103,6 +102,16 @@ exports.generarAnexoInteligente = async (req, res) => {
     if (!req.file)
       return res.status(400).json({ error: "Falta subir el PDF técnico" });
 
+    // 🔵 NUEVO: DATOS MANUALES DESDE FRONTEND
+    const {
+      rut_organismo,
+      nombre_organismo,
+      telefono_organismo,
+      direccion_organismo,
+      comuna_organismo,
+      region_organismo,
+    } = req.body;
+
     console.log(
       "📄 Extrayendo texto masivo con PDF2JSON:",
       req.file.originalname,
@@ -120,9 +129,9 @@ exports.generarAnexoInteligente = async (req, res) => {
         .json({ error: "No se pudo leer el PDF: " + errPdf });
     }
 
-    console.log("🤖 Analizando TODO el documento con Gemini 1.5 Flash...");
+    console.log("🤖 Analizando TODO el documento con Gemini 2.5 Flash...");
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     // --- AQUÍ ESTÁ LA MAGIA: EL PROMPT GIGANTE ---
     // Este prompt pide TODOS los campos típicos de un Anexo Técnico SENCE.
@@ -187,6 +196,34 @@ exports.generarAnexoInteligente = async (req, res) => {
         .json({ error: "La IA respondió pero no en formato JSON válido." });
     }
 
+    const datosFinales = {
+      // =====================
+      // DATOS MANUALES
+      // =====================
+      nombre_ejecutor: nombre_organismo,
+      rut_ejecutor: rut_organismo,
+      telefono_ejecutor: telefono_organismo,
+      direccion_ejecutor: direccion_organismo,
+      comuna_ejecutor: comuna_organismo,
+      region_ejecutor: region_organismo,
+
+      entidad_requirente: req.body.entidad_requirente || "—",
+
+      // =====================
+      // DATOS CURSO (MANUAL O IA)
+      // =====================
+      codigo_curso: req.body.codigo_curso || "—",
+      horas: datosExtraidos.horas_totales || "—",
+
+      // =====================
+      // DATOS IA
+      // =====================
+      contenidos: datosExtraidos.contenidos_resumen,
+      objetivo_general: datosExtraidos.objetivo_general,
+
+      // IA
+      ...datosExtraidos,
+    };
     console.log("✅ Datos extraídos (Ejemplo):", datosExtraidos.nombre_curso);
 
     // C. RELLENAR WORD
@@ -207,7 +244,7 @@ exports.generarAnexoInteligente = async (req, res) => {
       linebreaks: true,
     });
 
-    doc.render(datosExtraidos);
+    doc.render(datosFinales);
     const buf = doc
       .getZip()
       .generate({ type: "nodebuffer", compression: "DEFLATE" });
