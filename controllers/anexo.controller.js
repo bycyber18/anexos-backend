@@ -146,7 +146,28 @@ exports.generarAnexoInteligente = async (req, res) => {
       Instrucciones Críticas:
       1. Devuelve SOLO un objeto JSON válido.
       2. Si un dato no aparece explícitamente, infiérelo del contexto o pon "Según estándar SENCE" o "A definir por el ejecutor", pero NO lo dejes vacío.
-      3. Extrae listas (materiales, herramientas) como texto separado por comas o saltos de línea, NO como arrays, para que se impriman bien en Word.
+      3. OJO: Para "lista_equipos" y "lista_materiales" DEBES devolver un ARRAY de objetos. Para el resto de los campos, usa texto normal separado por comas o saltos de línea.
+      4. NO incluyas comentarios, notas, explicaciones ni texto fuera del JSON.
+      5. NO uses null, undefined, arrays vacíos ni strings vacíos. Usa siempre texto.
+      6. INSTRUCCIÓN ESPECIAL PARA "lista_equipos":
+        - Extrae los equipos y herramientas priorizando EXCLUSIVAMENTE lo que aparezca explícitamente en el texto.
+        - Si el texto menciona instrumentos de medición usados SOLO con fines teóricos o formativos 
+          (por ejemplo: Micrómetro, Comparador, Calibre, Goniómetro),
+          NO deben ser incluidos como equipos, ya que corresponden a materia de clase y no a equipamiento del curso.
+        - Si el texto describe procesos prácticos (ej: soldadura por arco, preparación de perfiles, corte, esmerilado, armado de estructuras),
+          debes incluir como equipos todos los elementos físicos necesarios para ejecutar dichos procesos.
+        - En particular, para procesos de fabricación metálica, DEBES incluir equipos como:
+          Perfil metálico, Ángulo metálico y Plancha metálica cuando el texto los indique o los requiera implícitamente.
+        - Los equipos deben ser técnicos y específicos (ej: "Máquina de soldar por arco eléctrico", "Esmeril angular", "Banco de trabajo metálico").
+        - NO uses descripciones genéricas como "equipos básicos" o "herramientas estándar".
+        - Asigna el módulo correcto según el contexto del uso del equipo (ej: Módulo 1, Módulo 3, Práctico, Transversal).
+        - El "Set de escritorio" debe ser considerado como EQUIPO cuando el texto lo indique, 
+          y debe asignarse al Módulo 3 si corresponde a actividades prácticas del curso.
+        - La cantidad total de cada equipo debe corresponder al cupo completo del curso: usa SIEMPRE "20" cuando aplique.
+        - El campo "antiguedad" debe indicar siempre "Menos de 2 años".
+        - El campo "certificacion" debe indicar "No aplica" cuando no exista una certificación específica.
+        - Completa siempre todos los campos del objeto con información realista y coherente con estándares SENCE.
+
 
       Estructura JSON requerida (Asegúrate de usar ESTAS CLAVES EXACTAS en tu respuesta):
       {
@@ -167,17 +188,35 @@ exports.generarAnexoInteligente = async (req, res) => {
         "infraestructura_taller": "Descripción del taller práctico (si aplica)",
         "infraestructura_banos": "Requisitos de servicios higiénicos",
         
-        "equipamiento_herramientas": "Lista detallada de herramientas y equipos necesarios (cantidad por alumno o total)",
+        "lista_equipos": [
+            {
+                "descripcion": "Nombre del equipo/herramienta",
+                "modulo": "Módulo o 'Transversal'",
+                "cantidad": "Cantidad Total",
+                "num_participantes": "Ej: 1 por alumno",
+                "antiguedad": "Ej: Menos de 2 años o Mas de 2 años",
+                "certificacion": "Ej: SEC o No aplica"
+            }
+        ],
+        
         "equipamiento_seguridad": "EPP necesarios (casco, guantes, zapatos, etc.)",
         
-        "materiales_insumos": "Lista de materiales fungibles (consumibles) para el curso",
+        "lista_materiales": [
+          {
+            "descripcion": "Material o insumo consumible",
+            "unidad": "Kilos, metros, unidades, litros, etc.",
+            "cantidad": "Cantidad total",
+            "modulo": "Módulo donde se utiliza",
+            "num_participantes": "Ej: 1 por alumno"
+          }
+        ],
+
         "materiales_escritorio": "Lápices, cuadernos, carpetas, etc.",
         
         "metodologia": "Descripción breve de la metodología (Teórico-Práctica, aprender haciendo, etc.)",
         "mecanismos_evaluacion": "Pruebas teóricas, listas de cotejo, escalas de apreciación, etc."
       }
     `;
-
     const result = await model.generateContent(prompt);
     const response = await result.response;
     let textoLimpio = response
