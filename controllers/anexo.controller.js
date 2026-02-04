@@ -54,6 +54,7 @@ exports.subirPlantilla = (req, res) => {
 };
 
 // 2. Generar Manual
+// 2. Generar Manual
 exports.generarAnexo = async (req, res) => {
   try {
     const templateName = req.body.nombrePlantilla || "plantilla_prueba.docx";
@@ -96,22 +97,22 @@ exports.generarAnexo = async (req, res) => {
   }
 };
 
-// 3. GENERACIÓN INTELIGENTE 
+// 3. GENERACIÓN INTELIGENTE
 exports.generarAnexoInteligente = async (req, res) => {
   try {
     if (!req.file)
       return res.status(400).json({ error: "Falta subir el PDF técnico" });
 
-    console.log("📄 Extrayendo texto con PDF2JSON:", req.file.originalname);
+    console.log(
+      "📄 Extrayendo texto masivo con PDF2JSON:",
+      req.file.originalname,
+    );
 
     // A. LEER TEXTO LOCALMENTE
     let textoCompleto = "";
     try {
       textoCompleto = await extraerTextoPDF(req.file.path);
-      console.log(
-        "✅ Texto extraído exitosamente. Longitud:",
-        textoCompleto.length,
-      );
+      console.log("✅ Texto extraído. Longitud:", textoCompleto.length);
     } catch (errPdf) {
       console.error("❌ Error leyendo PDF:", errPdf);
       return res
@@ -119,25 +120,53 @@ exports.generarAnexoInteligente = async (req, res) => {
         .json({ error: "No se pudo leer el PDF: " + errPdf });
     }
 
-    console.log("🤖 Enviando TEXTO a Google Gemini...");
+    console.log("🤖 Analizando TODO el documento con Gemini 1.5 Flash...");
 
-    // B. IA GEMINI 
-    // Aca se usa la version más estable en la API
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    // --- AQUÍ ESTÁ LA MAGIA: EL PROMPT GIGANTE ---
+    // Este prompt pide TODOS los campos típicos de un Anexo Técnico SENCE.
+    // Tienes que asegurarte de que tu Word tenga estas variables: {nombre_curso}, {objetivo_general}, etc.
     const prompt = `
-      Actúa como un experto en licitaciones SENCE. Analiza el siguiente texto extraído de un PDF:
+      Actúa como un experto técnico en licitaciones SENCE y OTIC de Chile. 
+      Tu tarea es extraer TODA la información técnica posible de este texto (proveniente de unas Bases Técnicas o Descriptor de Oficio) para rellenar un Anexo Técnico completo.
+
+      Texto a analizar:
+      "${textoCompleto.substring(0, 70000)}" 
       
-      "${textoCompleto.substring(0, 45000)}" 
-      
-      Instrucciones:
-      Extrae la información y devuélvela en un JSON válido (sin markdown).
-      Las claves deben ser:
-      - "nombre_curso"
-      - "horas"
-      - "objetivo_general"
-      - "contenidos" (Resumen breve)
-      - "requisitos"
-      - "materiales" (Si no hay, pon "Según estándar SENCE")
+      Instrucciones Críticas:
+      1. Devuelve SOLO un objeto JSON válido.
+      2. Si un dato no aparece explícitamente, infiérelo del contexto o pon "Según estándar SENCE" o "A definir por el ejecutor", pero NO lo dejes vacío.
+      3. Extrae listas (materiales, herramientas) como texto separado por comas o saltos de línea, NO como arrays, para que se impriman bien en Word.
+
+      Estructura JSON requerida (Asegúrate de usar ESTAS CLAVES EXACTAS en tu respuesta):
+      {
+        "nombre_curso": "Nombre completo del oficio o curso",
+        "horas_totales": "Duración total en horas",
+        "modalidad": "Presencial, E-learning o Blended",
+        
+        "objetivo_general": "Texto completo del objetivo",
+        "objetivos_especificos": "Lista de objetivos específicos",
+        
+        "contenidos_resumen": "Resumen de los módulos o unidades temáticas",
+        "numero_participantes": "Cantidad de alumnos (si sale), si no pon '25'",
+        
+        "requisitos_ingreso": "Edad, escolaridad y perfil de los postulantes",
+        "perfil_facilitador": "Experiencia y requisitos del profesor/relator",
+        
+        "infraestructura_sala": "Descripción de la sala de clases (mts2, iluminación, ventilación)",
+        "infraestructura_taller": "Descripción del taller práctico (si aplica)",
+        "infraestructura_banos": "Requisitos de servicios higiénicos",
+        
+        "equipamiento_herramientas": "Lista detallada de herramientas y equipos necesarios (cantidad por alumno o total)",
+        "equipamiento_seguridad": "EPP necesarios (casco, guantes, zapatos, etc.)",
+        
+        "materiales_insumos": "Lista de materiales fungibles (consumibles) para el curso",
+        "materiales_escritorio": "Lápices, cuadernos, carpetas, etc.",
+        
+        "metodologia": "Descripción breve de la metodología (Teórico-Práctica, aprender haciendo, etc.)",
+        "mecanismos_evaluacion": "Pruebas teóricas, listas de cotejo, escalas de apreciación, etc."
+      }
     `;
 
     const result = await model.generateContent(prompt);
@@ -158,7 +187,7 @@ exports.generarAnexoInteligente = async (req, res) => {
         .json({ error: "La IA respondió pero no en formato JSON válido." });
     }
 
-    console.log("✅ Datos Listos:", datosExtraidos);
+    console.log("✅ Datos extraídos (Ejemplo):", datosExtraidos.nombre_curso);
 
     // C. RELLENAR WORD
     const templatePath = path.resolve(
@@ -167,12 +196,12 @@ exports.generarAnexoInteligente = async (req, res) => {
       "plantilla_anexo2.docx",
     );
     if (!fs.existsSync(templatePath))
-      return res
-        .status(500)
-        .json({ error: "Falta plantilla_anexo2.docx en storage/templates" });
+      return res.status(500).json({ error: "Falta plantilla_anexo2.docx" });
 
     const content = fs.readFileSync(templatePath, "binary");
     const zip = new PizZip(content);
+
+    // Configuración para que los saltos de línea en el JSON se vean en el Word
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
       linebreaks: true,
@@ -183,7 +212,10 @@ exports.generarAnexoInteligente = async (req, res) => {
       .getZip()
       .generate({ type: "nodebuffer", compression: "DEFLATE" });
 
-    res.setHeader("Content-Disposition", "attachment; filename=Anexo_IA.docx");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=Anexo_IA_Completo.docx",
+    );
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -231,11 +263,9 @@ exports.actualizarAnexo = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const anexoActualizado = await Anexo.findByIdAndUpdate(
-      id,
-      req.body,
-      { new: true }
-    );
+    const anexoActualizado = await Anexo.findByIdAndUpdate(id, req.body, {
+      new: true,
+    });
 
     if (!anexoActualizado) {
       return res.status(404).json({ error: "Anexo no encontrado" });
@@ -270,5 +300,3 @@ exports.eliminarAnexo = async (req, res) => {
     res.status(500).json({ error: "Error al eliminar el anexo" });
   }
 };
-
-
