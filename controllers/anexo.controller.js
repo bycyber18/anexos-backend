@@ -138,43 +138,43 @@ exports.generarAnexoInteligente = async (req, res) => {
     // Tienes que asegurarte de que tu Word tenga estas variables: {nombre_curso}, {objetivo_general}, etc.
     const prompt = `
       Actúa como un experto técnico en licitaciones SENCE y OTIC de Chile. 
-      Tu tarea es extraer TODA la información técnica posible de este texto (proveniente de unas Bases Técnicas o Descriptor de Oficio) para rellenar un Anexo Técnico completo.
+      Tu tarea es extraer TODA la información técnica posible de este texto para rellenar un Anexo Técnico completo.
 
       Texto a analizar:
       "${textoCompleto.substring(0, 70000)}" 
       
       Instrucciones Críticas:
       1. Devuelve SOLO un objeto JSON válido.
-      2. Si un dato no aparece explícitamente, infiérelo del contexto o pon "Según estándar SENCE" o "A definir por el ejecutor", pero NO lo dejes vacío.
+      2. Si un dato no aparece explícitamente, infiérelo del contexto o pon "Según estándar SENCE" o "A definir por el ejecutor".
       3. OJO: Para "lista_equipos" y "lista_materiales" DEBES devolver un ARRAY de objetos.
       4. NO incluyas comentarios fuera del JSON.
-      5. NO uses null ni undefined.
 
-      =========== REGLAS DE ORO PARA "lista_equipos" (Sigue esto al pie de la letra) ===========
+      =========== REGLAS DE ORO PARA "lista_equipos" y "lista_materiales" ===========
       
-      A. CRITERIO DE INCLUSIÓN:
-         - Incluye todo equipo físico necesario para la ejecución práctica (Soldadoras, Esmeriles, Taladros, Prensas, etc.).
-         - Incluye también "Set de escritorio", "Proyector" y "Notebook/PC" si el texto los menciona.
-         - NO incluyas instrumentos puramente teóricos de medición (Micrómetro, Pie de metro) como 'equipos', salvo que sean máquinas grandes.
+      A. CRITERIO DE MÓDULOS (FORMATO LIMPIO):
+         - En el campo "modulo", indica SOLO los NÚMEROS de los módulos separados por comas.
+         - Ejemplo correcto: "1, 3"
+         - Ejemplo INCORRECTO: "Módulo 1, Módulo 3"
+         - Si aplica a todo el curso o es infraestructura general, pon "Transversal".
+         - Esta regla aplica para EQUIPOS y MATERIALES.
 
-      B. CRITERIO DE MÓDULOS (Multi-módulo):
-         - Si un equipo se utiliza en varios módulos, en el campo "modulo" DEBES listarlos todos separados por comas (Ej: "Módulo 1, Módulo 3").
-         - NO elijas solo uno si aplica a varios. Si aplica a todo el curso, pon "Transversal".
-
-      C. CRITERIO DE PARTICIPANTES (Números, no texto):
-         - En el campo "num_participantes", NUNCA pongas "Uso del facilitador" ni textos descriptivos. DEBE SER UN NÚMERO.
-         - Si el equipo es individual por alumno: pon "1".
-         - Si el equipo es compartido por grupos: pon el tamaño del grupo (Ej: "5").
-         - Si el equipo es ÚNICO para la sala (Ej: Proyector, Pizarra, PC del Profesor, Extintor): pon el TOTAL de alumnos del curso (Ej: "20" o "25").
-
-      D. CRITERIO DE CERTIFICACIÓN (SEC):
-         - En el campo "certificacion": Analiza si el equipo es ELÉCTRICO (se enchufa a la corriente o usa carga eléctrica).
-         - Si es ELÉCTRICO (Ej: Soldadora, Taladro, Esmeril, Proyector, Notebook, Alargador): Pon "SEC".
+      B. CRITERIO DE CERTIFICACIÓN (SEC) - SOLO EQUIPOS:
+         - Si el equipo es ELÉCTRICO (se enchufa o usa batería, ej: Soldadora, Taladro, Esmeril, Proyector, Notebook, Alargador): Pon "SEC".
          - Si es MANUAL o inerte (Ej: Martillo, Alicate, Mesa, Pizarra): Pon "No aplica".
          - NUNCA dejes este campo vacío.
 
-      E. CRITERIO DE CANTIDAD:
-         - La "cantidad" debe ser coherente con el número de alumnos. Si es individual y son 20 alumnos, pon "20".
+      C. CRITERIO DE PARTICIPANTES (NÚMEROS) - SOLO EQUIPOS:
+         - En "num_participantes" DEBE ir un NÚMERO o una relación numérica (Ej: "1", "5", "20").
+         - NUNCA pongas texto como "Uso del facilitador" o "Para el docente".
+         - Si es un equipo ÚNICO para la sala (Ej: Proyector, PC Profesor, Pizarra): Pon el TOTAL de alumnos (Ej: "20").
+         - Si es individual: Pon "1".
+
+      D. CRITERIO DE INCLUSIÓN DE EQUIPOS:
+         - Incluye equipos físicos prácticos (Soldadoras, Esmeriles).
+         - Incluye "Set de escritorio", "Proyector", "Notebook/PC" y "Extintores".
+         - NO incluyas instrumentos de medición puramente teóricos (Micrómetro, Pie de metro) salvo que sean máquinas.
+         - Para soldadura, incluye: Perfiles, Ángulos y Planchas metálicas si el texto los pide.
+
       ========================================================================================
 
       Estructura JSON requerida (Usa estas claves exactas):
@@ -198,8 +198,8 @@ exports.generarAnexoInteligente = async (req, res) => {
         
         "lista_equipos": [
             {
-                "descripcion": "Nombre específico del equipo (Ej: Soldadora Arco Manual)",
-                "modulo": "Ej: 'Módulo 1, Módulo 2' o 'Transversal'",
+                "descripcion": "Nombre específico del equipo",
+                "modulo": "Ej: '1, 2' o 'Transversal'",
                 "cantidad": "Número total (Ej: 20)",
                 "num_participantes": "Número (Ej: 1, 5, o 20)",
                 "antiguedad": "Menos de 2 años",
@@ -214,7 +214,7 @@ exports.generarAnexoInteligente = async (req, res) => {
             "descripcion": "Material consumible",
             "unidad": "Kilos, metros, unidades",
             "cantidad": "Cantidad total",
-            "modulo": "Módulo donde se utiliza",
+            "modulo": "Ej: '2, 3' o 'Transversal'",
             "num_participantes": "Ej: 1"
           }
         ],
@@ -271,6 +271,20 @@ exports.generarAnexoInteligente = async (req, res) => {
       ...datosExtraidos,
     };
     console.log("✅ Datos extraídos (Ejemplo):", datosExtraidos.nombre_curso);
+
+    try {
+      await new Anexo({
+        nombrePlantilla: "plantilla_anexo2.docx",
+        datosRellenados: datosFinales,
+        fechaGeneracion: new Date(),
+      }).save();
+
+      console.log("✅ GUARDADO EXITOSO EN BD");
+      res.setHeader("X-Anexo-Guardado", "true");
+    } catch (dbError) {
+      console.error("❌ ERROR AL GUARDAR EN BD:", dbError);
+      res.setHeader("X-Anexo-Guardado", "false");
+    }
 
     // C. RELLENAR WORD
     const templatePath = path.resolve(
