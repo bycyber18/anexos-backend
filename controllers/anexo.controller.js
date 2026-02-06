@@ -146,30 +146,38 @@ exports.generarAnexoInteligente = async (req, res) => {
       Instrucciones Críticas:
       1. Devuelve SOLO un objeto JSON válido.
       2. Si un dato no aparece explícitamente, infiérelo del contexto o pon "Según estándar SENCE" o "A definir por el ejecutor", pero NO lo dejes vacío.
-      3. OJO: Para "lista_equipos" y "lista_materiales" DEBES devolver un ARRAY de objetos. Para el resto de los campos, usa texto normal separado por comas o saltos de línea.
-      4. NO incluyas comentarios, notas, explicaciones ni texto fuera del JSON.
-      5. NO uses null, undefined, arrays vacíos ni strings vacíos. Usa siempre texto.
-      6. INSTRUCCIÓN ESPECIAL PARA "lista_equipos":
-        - Extrae los equipos y herramientas priorizando EXCLUSIVAMENTE lo que aparezca explícitamente en el texto.
-        - Si el texto menciona instrumentos de medición usados SOLO con fines teóricos o formativos 
-          (por ejemplo: Micrómetro, Comparador, Calibre, Goniómetro),
-          NO deben ser incluidos como equipos, ya que corresponden a materia de clase y no a equipamiento del curso.
-        - Si el texto describe procesos prácticos (ej: soldadura por arco, preparación de perfiles, corte, esmerilado, armado de estructuras),
-          debes incluir como equipos todos los elementos físicos necesarios para ejecutar dichos procesos.
-        - En particular, para procesos de fabricación metálica, DEBES incluir equipos como:
-          Perfil metálico, Ángulo metálico y Plancha metálica cuando el texto los indique o los requiera implícitamente.
-        - Los equipos deben ser técnicos y específicos (ej: "Máquina de soldar por arco eléctrico", "Esmeril angular", "Banco de trabajo metálico").
-        - NO uses descripciones genéricas como "equipos básicos" o "herramientas estándar".
-        - Asigna el módulo correcto según el contexto del uso del equipo (ej: Módulo 1, Módulo 3, Práctico, Transversal).
-        - El "Set de escritorio" debe ser considerado como EQUIPO cuando el texto lo indique, 
-          y debe asignarse al Módulo 3 si corresponde a actividades prácticas del curso.
-        - La cantidad total de cada equipo debe corresponder al cupo completo del curso: usa SIEMPRE "20" cuando aplique.
-        - El campo "antiguedad" debe indicar siempre "Menos de 2 años".
-        - El campo "certificacion" debe indicar "No aplica" cuando no exista una certificación específica.
-        - Completa siempre todos los campos del objeto con información realista y coherente con estándares SENCE.
+      3. OJO: Para "lista_equipos" y "lista_materiales" DEBES devolver un ARRAY de objetos.
+      4. NO incluyas comentarios fuera del JSON.
+      5. NO uses null ni undefined.
 
+      =========== REGLAS DE ORO PARA "lista_equipos" (Sigue esto al pie de la letra) ===========
+      
+      A. CRITERIO DE INCLUSIÓN:
+         - Incluye todo equipo físico necesario para la ejecución práctica (Soldadoras, Esmeriles, Taladros, Prensas, etc.).
+         - Incluye también "Set de escritorio", "Proyector" y "Notebook/PC" si el texto los menciona.
+         - NO incluyas instrumentos puramente teóricos de medición (Micrómetro, Pie de metro) como 'equipos', salvo que sean máquinas grandes.
 
-      Estructura JSON requerida (Asegúrate de usar ESTAS CLAVES EXACTAS en tu respuesta):
+      B. CRITERIO DE MÓDULOS (Multi-módulo):
+         - Si un equipo se utiliza en varios módulos, en el campo "modulo" DEBES listarlos todos separados por comas (Ej: "Módulo 1, Módulo 3").
+         - NO elijas solo uno si aplica a varios. Si aplica a todo el curso, pon "Transversal".
+
+      C. CRITERIO DE PARTICIPANTES (Números, no texto):
+         - En el campo "num_participantes", NUNCA pongas "Uso del facilitador" ni textos descriptivos. DEBE SER UN NÚMERO.
+         - Si el equipo es individual por alumno: pon "1".
+         - Si el equipo es compartido por grupos: pon el tamaño del grupo (Ej: "5").
+         - Si el equipo es ÚNICO para la sala (Ej: Proyector, Pizarra, PC del Profesor, Extintor): pon el TOTAL de alumnos del curso (Ej: "20" o "25").
+
+      D. CRITERIO DE CERTIFICACIÓN (SEC):
+         - En el campo "certificacion": Analiza si el equipo es ELÉCTRICO (se enchufa a la corriente o usa carga eléctrica).
+         - Si es ELÉCTRICO (Ej: Soldadora, Taladro, Esmeril, Proyector, Notebook, Alargador): Pon "SEC".
+         - Si es MANUAL o inerte (Ej: Martillo, Alicate, Mesa, Pizarra): Pon "No aplica".
+         - NUNCA dejes este campo vacío.
+
+      E. CRITERIO DE CANTIDAD:
+         - La "cantidad" debe ser coherente con el número de alumnos. Si es individual y son 20 alumnos, pon "20".
+      ========================================================================================
+
+      Estructura JSON requerida (Usa estas claves exactas):
       {
         "nombre_curso": "Nombre completo del oficio o curso",
         "horas_totales": "Duración total en horas",
@@ -178,43 +186,42 @@ exports.generarAnexoInteligente = async (req, res) => {
         "objetivo_general": "Texto completo del objetivo",
         "objetivos_especificos": "Lista de objetivos específicos",
         
-        "contenidos_resumen": "Resumen de los módulos o unidades temáticas",
-        "numero_participantes": "Cantidad de alumnos (si sale), si no pon '25'",
+        "contenidos_resumen": "Resumen de los módulos",
+        "numero_participantes": "Cantidad de alumnos (si no sale explícito, pon '20')",
         
-        "requisitos_ingreso": "Edad, escolaridad y perfil de los postulantes",
-        "perfil_facilitador": "Experiencia y requisitos del profesor/relator",
+        "requisitos_ingreso": "Perfil de los postulantes",
+        "perfil_facilitador": "Experiencia y requisitos",
         
-        "infraestructura_sala": "Descripción de la sala de clases (mts2, iluminación, ventilación)",
-        "infraestructura_taller": "Descripción del taller práctico (si aplica)",
-        "infraestructura_banos": "Requisitos de servicios higiénicos",
+        "infraestructura_sala": "Descripción de la sala",
+        "infraestructura_taller": "Descripción del taller",
+        "infraestructura_banos": "Requisitos de baños",
         
         "lista_equipos": [
             {
-                "descripcion": "Nombre del equipo/herramienta",
-                "modulo": "Módulo o 'Transversal'",
-                "cantidad": "Cantidad Total",
-                "num_participantes": "Ej: 1 por alumno",
-                "antiguedad": "Ej: Menos de 2 años o Mas de 2 años",
-                "certificacion": "Ej: SEC o No aplica"
+                "descripcion": "Nombre específico del equipo (Ej: Soldadora Arco Manual)",
+                "modulo": "Ej: 'Módulo 1, Módulo 2' o 'Transversal'",
+                "cantidad": "Número total (Ej: 20)",
+                "num_participantes": "Número (Ej: 1, 5, o 20)",
+                "antiguedad": "Menos de 2 años",
+                "certificacion": "SEC o No aplica"
             }
         ],
         
-        "equipamiento_seguridad": "EPP necesarios (casco, guantes, zapatos, etc.)",
+        "equipamiento_seguridad": "EPP necesarios",
         
         "lista_materiales": [
           {
-            "descripcion": "Material o insumo consumible",
-            "unidad": "Kilos, metros, unidades, litros, etc.",
+            "descripcion": "Material consumible",
+            "unidad": "Kilos, metros, unidades",
             "cantidad": "Cantidad total",
             "modulo": "Módulo donde se utiliza",
-            "num_participantes": "Ej: 1 por alumno"
+            "num_participantes": "Ej: 1"
           }
         ],
 
-        "materiales_escritorio": "Lápices, cuadernos, carpetas, etc.",
-        
-        "metodologia": "Descripción breve de la metodología (Teórico-Práctica, aprender haciendo, etc.)",
-        "mecanismos_evaluacion": "Pruebas teóricas, listas de cotejo, escalas de apreciación, etc."
+        "materiales_escritorio": "Lápices, cuadernos, carpetas",
+        "metodologia": "Descripción metodología",
+        "mecanismos_evaluacion": "Pruebas, listas de cotejo"
       }
     `;
     const result = await model.generateContent(prompt);
